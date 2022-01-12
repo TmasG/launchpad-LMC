@@ -63,13 +63,9 @@ def setSection(default, section, colors):
         if default:
             for i in range(len(componentCoords[section])):
                 lmcColorsDefault[componentCoords[section][i][0]][componentCoords[section][i][1]] = colors
-setSection(True, "out", [250, 0, 250])
-setSection(True, "pc", [10, 0, 250])
-setSection(True, "inst", [0, 50, 130])
-setSection(True, "acc", [250, 0, 225])
-setSection(True, "alu", [250, 150, 0])
-setSection(True, "inp", [0, 175, 250])
-setSection(True, "ram", [250,250,0])
+componentColors = {"out":[250,0,250],"pc":[0,0,250],"inst":[0,50,150],"acc":[250,0,250],"alu":[250,150,0],"inp":[0,150,250],"ram":[250,250,0]}
+for component in componentColors:
+    setSection(True, component, componentColors[component])
 
 def intialiseLmcColors():
     global lmcColorsDefault
@@ -113,11 +109,10 @@ def q(x,y,a,b,c):
     tickFlash.append([[x,y],a,b,c])
 def fetchData(adloc,offset):
     global ramDims
-    # convert to list
-    address = [3+(adloc)%ramDims[0],(adloc)//ramDims[0]+1]
     commands = 0
-    x = address[0]
-    y = address[1]
+    #formats list index as co-ordinate
+    x = 3+(adloc)%ramDims[0]
+    y = (adloc)//ramDims[0]+1
     q(x,y,offset+commands,1,[0,150,0])
     y+=1
     while y <= 7:
@@ -135,8 +130,7 @@ def fetchData(adloc,offset):
     q(2,5,offset+commands+2,1,[0,0,150])
     q(0,5,offset+commands+3,1,[0,150,0])
     q(1,5,offset+commands+3,1,[0,150,0])
-    commands += 4
-    return(commands)
+    return(commands+4)
 def deliverData(adloc,offset):
     global ramDims
     # convert to list
@@ -161,17 +155,30 @@ def deliverData(adloc,offset):
     q(x,y,offset+commands,1,[0,150,0])
     return(commands)
 
-def inputData():
+def inputData(offset):
     global registers
     # in to acc
     registers["acc"] = int(input("Input -->"))
     flashComponent("in",[150,150,150],0)
-def outputData():
+    q(2,7,1+offset,1,[0,150,0])
+    q(2,6,2+offset,1,[0,150,0])
+    q(2,5,3+offset,1,[0,150,0])
+    q(0,5,4+offset,1,[0,0,150])
+    q(1,5,4+offset,1,[0,0,150])
+    return(4)
+def outputData(offset):
     global registers
-    # acc to our
-    flashComponent("out",[150,150,150],0)
+    # acc to out
+    q(0,5,1+offset,1,[0,150,0])
+    q(1,5,1+offset,1,[0,150,0])
+    q(2,5,2+offset,1,[0,150,0])
+    q(2,4,3+offset,1,[0,150,0])
+    q(2,3,4+offset,1,[0,150,0])
+    flashComponent("out",[150,150,150],5)
     print("Output: " + str(registers["acc"]))
+    return(5)
 
+# Defining light paths \/ (Start)
 def instToPc(offset):
     q(0,4,0+offset,1,[150,0,0])
     q(1,4,0+offset,1,[150,0,0])
@@ -179,6 +186,7 @@ def instToPc(offset):
     q(2,3,2+offset,1,[150,0,0])
     q(1,3,3+offset,1,[150,0,0])
     q(0,3,3+offset,1,[150,0,0])
+    return(3)
 
 def pcToInst(offset):
     q(1,3,0+offset,1,[150,0,0])
@@ -187,6 +195,7 @@ def pcToInst(offset):
     q(2,4,2+offset,1,[150,0,0])
     q(1,4,3+offset,1,[150,0,0])
     q(0,4,3+offset,1,[150,0,0])
+    return(3)
 
 def aluToAcc(offset):
     q(0,6,0+offset,1,[150,0,0])
@@ -195,6 +204,7 @@ def aluToAcc(offset):
     q(2,5,2+offset,1,[150,0,0])
     q(0,5,3+offset,1,[150,0,0])
     q(1,5,3+offset,1,[150,0,0])
+    return(3)
 
 def accToAlu(offset):
     q(0,5,0+offset,1,[150,0,0])
@@ -203,9 +213,10 @@ def accToAlu(offset):
     q(2,6,2+offset,1,[150,0,0])
     q(0,6,3+offset,1,[150,0,0])
     q(1,6,3+offset,1,[150,0,0])
+    return(3)
+# Defining light paths /\ (end)
 
 def flashComponent(component,color,offset):
-    # print(component)
     global tickFlash
     global componentCoords
     for i in range(len(componentCoords[component])):
@@ -216,7 +227,7 @@ def endProcess():
     programStatus = False
     exit()
 
-def exeInst():
+def runInst():
     global registers
     global ram
     instruction = ram[registers["pc"]]
@@ -229,6 +240,7 @@ def exeInst():
         endProcess()
     elif registers["ir"] == 1:
         print("add")
+        delay = 0
         accToAlu(0)
         delay = fetchData(registers["ar"],3)
         aluToAcc(3 + delay)
@@ -236,6 +248,7 @@ def exeInst():
         val = registers["acc"] + ram[registers["ar"]]
         aluToAcc(7 + delay)
         registers["acc"] = val
+        return(10+delay)
     elif registers["ir"] == 2:
         print("sub")
         accToAlu(0)
@@ -245,77 +258,84 @@ def exeInst():
         val = registers["acc"] - ram[registers["ar"]]
         aluToAcc(7 + delay)
         registers["acc"] = val
+        return(10+delay)
     elif registers["ir"] == 3:
         print("sta")
-        deliverData(registers["ar"],0)
+        delay = deliverData(registers["ar"],0)
         ram[registers["ar"]] = registers["acc"]
-    elif registers["ir"] == 4:
-        flashComponent("ram",[150,0,0],0)
-        flashComponent("instr",[150,0,0],0)
-        raise ValueError("Instruction error, \"4\" is an undefined opcode.")
+        return(delay)
     elif registers["ir"] == 5:
         print("ldr")
         flashComponent("acc",[150,0,0],0)
         delay = fetchData(registers["ar"],1)
         registers["acc"] = ram[registers["ar"]]
+        return(delay)
     elif registers["ir"] == 6:
         print("bra")
         registers["pc"] = registers["ar"]
+        return(0)
     elif registers["ir"] == 7:
         print("brz")
         accToAlu(0)
         if registers["acc"] == 0:
             flashComponent("alu",[0,150,0],3)
             registers["pc"] = registers["ar"]
+            return(4)
         else:
             flashComponent("alu",[150,0,0],3)
+            return(4)
     elif registers["ir"] == 8:
         print("brp")
         accToAlu(0)
         if registers["acc"] > 0:
             flashComponent("alu",[0,150,0],3)
             registers["pc"] = registers["ar"]
+            return(4)
         else:
             flashComponent("alu",[150,0,0],3)
+            return(4)
     elif registers["ir"] == 9:
         print("io")
         if registers["ar"] == 1:
-            inputData()
+            inputData(0)
+            return(4)
         elif registers["ar"] == 2:
-            outputData()
-
+            outputData(0)
+            return(5)
+    return(3)
+        
 
 assembleToMemory()
-print( " - Testing LedAllOn()" )
-for i in [ 5, 21, 79, 3]:
-    lp.LedAllOn( i )
-    time.sleep(0.5)
 lp.LedAllOn(0)
 lp.Reset()
 intialiseLmcColors()
+# Time between ticks (ms)
+tickLength = 50 
 print("Start")
 programStatus = True
 i = 0
 while True:
-    buts = lp.ButtonStateXY()
-    if i %100 == 0:
+    if i %tickLength == 0:
         updatePad()
         if ready and programStatus:
-            #execute
-            exeInst()
-            print(registers["ir"],registers["ar"])
+            #FDE:
+            delay = runInst()+1
             #iteration
             registers["pc"]+=1
-            # print(ram,registers)
-    if buts != []:
-        print(buts)
+            w = [150,150,150]
+            q(0,3,delay,1,w)
+            q(1,3,delay,1,w)
+            q(2,3,delay+1,1,w)
+            q(2,4,delay+2,1,w)
+            q(2,5,delay+3,1,w)
+            q(2,6,delay+4,1,w)
+            q(0,6,delay+5,1,w)
+            q(1,6,delay+5,1,w)
+            q(2,6,delay+6,1,w)
+            q(2,5,delay+7,1,w)
+            q(2,4,delay+8,1,w)
+            q(2,3,delay+9,1,w)
+            q(0,3,delay+10,1,w)
+            q(1,3,delay+10,1,w)
     i+=1
     time.sleep(0.001)
-
-# # List the class"s methods
-# print( " - Available methods:" )
-# for mName in sorted( dir( lp ) ):
-#     if mName.find( "__") >= 0: 
-#         continue
-#     if callable( getattr( lp, mName ) ):
-#         print( "     " + str( mName ) + "()" )
