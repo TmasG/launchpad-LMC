@@ -1,13 +1,9 @@
-from os import X_OK
-import launchpad_py as launchpad
-from pygame import time
-import time as tm
 import pynput
-# import pydirectinput
-# import pyautoguix
+import launchpad_py
+import time
 keyboard = pynput.keyboard.Controller()
 key = pynput.keyboard.Key
-lp = launchpad.LaunchpadMk2()
+lp = launchpad_py.LaunchpadMk2()
 lp.Open( 0, "mk2" )
 lp.ButtonFlush()
 lp.Reset()
@@ -34,59 +30,29 @@ def readFile(fileName):
   with open(fileName) as f:
     lines = list(f.readlines())
     return(lines)
-def loadToMemory():
-    file = readFile("code.txt")
+def assembleToMemory():
+    global ram
+    components = {"hlt":0,"add":1,"sub":2,"sta":3,"lda":5,"bra":6,"brz":7,"brp":8,"int":91,"out":92}
+    # loading .ass (assembly) code file
+    file = readFile("code.ass")
     dats = {}
-    #clean and dat
+    # clean and dat
     for ln in range(len(file)):
         file[ln] = file[ln].replace("\n","").split("#")[0].rstrip().lower().split(" ")
         if len(file[ln])>1 and "dat" == file[ln][1]:
             dats[file[ln][0]] = str(ln)
-    #loading
+        # assembling
     for ln in range(len(file)):
-        if "hlt" == file[ln][0]:
-            ram[ln] = 0
-        elif "add" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("1" + file[ln][1])
-        elif "sub" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("2" + file[ln][1])
-        elif "sta" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("3" + file[ln][1])
-        elif "lda" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("5" + file[ln][1])
-        elif "bra" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("6" + file[ln][1])
-        elif "brz" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("7" + file[ln][1])
-        elif "brp" == file[ln][0]:
-            for i in dats:
-                if file[ln][1] == i:
-                    file[ln][1] = dats[i]
-            ram[ln] = int("8" + file[ln][1])
-        elif "inp" == file[ln][0]:
-            ram[ln] = 91
-        elif "out" == file[ln][0]:
-            ram[ln] = 92
-        elif len(file[ln])>1 and "dat" == file[ln][1]:
+        if len(file[ln])>1 and "dat" == file[ln][1]:
             ram[ln]= int(file[ln][2])
+        else:
+            if len(file[ln])>1:
+                for i in dats:
+                    if file[ln][1] == i:
+                        file[ln][1] = dats[i]
+                ram[ln] = int(str(components[file[ln][0]]) + file[ln][1])
+            else:
+                ram[ln] = components[file[ln][0]]
 
 def setSection(default, section, colors):
     global lmcColorsTick
@@ -319,11 +285,11 @@ def exeInst():
             outputData()
 
 
-loadToMemory()
+assembleToMemory()
 print( " - Testing LedAllOn()" )
 for i in [ 5, 21, 79, 3]:
     lp.LedAllOn( i )
-    time.wait(500)
+    time.sleep(0.5)
 lp.LedAllOn(0)
 lp.Reset()
 intialiseLmcColors()
@@ -344,7 +310,7 @@ while True:
     if buts != []:
         print(buts)
     i+=1
-    tm.sleep(0.001)
+    time.sleep(0.001)
 
 # # List the class"s methods
 # print( " - Available methods:" )
