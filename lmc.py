@@ -33,8 +33,8 @@ def readFile(fileName):
 def assembleToMemory():
     global ram
     components = {"hlt":0,"add":1,"sub":2,"sta":3,"lda":5,"bra":6,"brz":7,"brp":8,"int":91,"out":92}
-    # loading .ass (assembly) code file
-    file = readFile("code.ass")
+    # loading source code file
+    file = readFile("code.txt")
     dats = {}
     # clean and dat
     for ln in range(len(file)):
