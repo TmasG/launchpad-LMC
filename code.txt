@@ -1,0 +1,13 @@
+lda i
+sta 24
+sub x
+sta 24 # StartLoop: 
+lda x
+add x
+sta x
+out
+lda 24 # EndLoop
+bra 2
+hlt
+x dat 1
+i dat 5
