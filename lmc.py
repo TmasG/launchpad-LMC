@@ -310,7 +310,7 @@ lp.LedAllOn(0)
 lp.Reset()
 intialiseLmcColors()
 # Time between ticks (ms)
-tickLength = 50 
+tickLength = 150 
 print("Start")
 programStatus = True
 i = 0
